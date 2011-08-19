@@ -48,7 +48,10 @@ class APP.Controller
 
   constructor: (@options = {}) ->
     _client = new Faye.Client @options.mount
-    _messages = new APP.Messages
+    tst = new APP.Message
+      from: 'From'
+      content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec feugiat vulputate ante, sed gravida libero tincidunt vel.'
+    _messages = new APP.Messages [tst]
     _messagesView = new APP.MessagesView
       el:         '#messages'
       collection: _messages
@@ -71,5 +74,3 @@ jQuery ->
     mount:      '/faye'
     broadcast:  '/rooms/broadcast'
   controller.startListening()
-
-  window.zlaj = controller

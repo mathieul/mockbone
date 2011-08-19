@@ -59,4 +59,4 @@ DEPENDENCIES
   rb-fsevent
   sass (= 3.1.7)
   sinatra (= 1.2.6)
-  thin
+  thin (= 1.2.11)

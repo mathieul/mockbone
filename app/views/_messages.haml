@@ -1,5 +1,9 @@
 %script#template-messages(type='text/x-handlebars-template')
-  %section
-    %header
-      %h1 Messages
-    %ul.list
+  %header
+    %h1 Messages
+  %ul.list
+
+%script#template-message(type='text/x-handlebars-template')
+  %li
+    %strong.from {{from}}
+    .content {{content}}
