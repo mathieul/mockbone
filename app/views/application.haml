@@ -7,8 +7,17 @@
 
   %body
     #container
-      %header
-        %h1 Skeleton
+      #messages
 
+
+    / Templates
+    = haml :_messages
+    = haml :_message
+
+    / JavaScripts
     %script(src='/faye.js')
+    %script(src='/javascripts/jquery-min.js')
+    %script(src='/javascripts/handlebars.js')
+    %script(src='/javascripts/underscore-min.js')
+    %script(src='/javascripts/backbone-min.js')
     %script(src='/javascripts/application.js')
