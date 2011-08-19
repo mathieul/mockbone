@@ -1,1 +1,0 @@
-$ rackup config.ru -s thin
