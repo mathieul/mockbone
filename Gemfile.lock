@@ -30,6 +30,8 @@ GEM
     guard-coffeescript (0.3.3)
       coffee-script (>= 2.2.0)
       guard (>= 0.4)
+    guard-shell (0.1.1)
+      guard (>= 0.2.0)
     haml (3.1.2)
     hiredis (0.3.2)
     json (1.5.3)
@@ -55,6 +57,7 @@ DEPENDENCIES
   growl
   guard
   guard-coffeescript
+  guard-shell
   haml (= 3.1.2)
   rb-fsevent
   sass (= 3.1.7)

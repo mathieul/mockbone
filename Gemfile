@@ -9,6 +9,7 @@ gem 'thin',     '1.2.11'
 group :development do
   gem 'guard'
   gem 'guard-coffeescript'
+  gem 'guard-shell'
   gem 'growl'
   gem 'rb-fsevent'
 end
