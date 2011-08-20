@@ -63,7 +63,8 @@
     MessagesView.prototype.render = function() {
       $(this.el).empty().html(this.template());
       this.list = this.$('ul.list');
-      this.collection.chain().reverse().each(this.renderMessage).value();
+      this.collection.each(this.renderMessage);
+      this.list[0].scrollTop = this.list[0].scrollHeight;
       $('#message').focus();
       return this;
     };

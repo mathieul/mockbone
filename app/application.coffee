@@ -36,10 +36,8 @@ class APP.MessagesView extends Backbone.View
   render: ->
     $(@el).empty().html @template()
     @list = @$ 'ul.list'
-    @collection.chain()
-      .reverse()
-      .each(@renderMessage)
-      .value()
+    @collection.each(@renderMessage)
+    @list[0].scrollTop = @list[0].scrollHeight
     $('#message').focus()
     @
 
