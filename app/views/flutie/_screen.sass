@@ -16,11 +16,33 @@ body
   height: 250px
   margin: 0
   padding: 10px 20px
-  background-color: #eee
-  border-top-right-radius: 20px
-  border-bottom-left-radius: 20px
+  background-color: #ccc
+  border-radius: 5px
+  border: 1px solid #666
   overflow-x: hidden
 
-#messages li
-  margin: 5px 0
-  background-color: #ccc
+li.message-item
+  position: relative
+  list-style-type: none
+  padding: 5px
+
+  .from
+    position: absolute
+    width: 15%
+    padding: 5px 10px
+    margin-bottom: 5px
+    font-weight: bold
+    border-radius: 5px
+    text-align: center
+    overflow-x: hidden
+
+  .content
+    margin-left: 20%
+    margin-bottom: 5px
+    padding: 5px
+    color: #333
+    background-color: white
+    border-radius: 5px
+
+#message
+  width: 80%

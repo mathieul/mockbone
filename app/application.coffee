@@ -20,6 +20,9 @@ class APP.Messages extends Backbone.Collection
   model: APP.Message
 
 class APP.MessagesView extends Backbone.View
+  events:
+    'click #send':        'sendMessage'
+    'keypress #message':  'enterMessage'
   template: Handlebars.compile $('#template-messages').html()
 
   constructor: (options) ->
@@ -32,7 +35,11 @@ class APP.MessagesView extends Backbone.View
   render: ->
     $(@el).empty().html @template()
     @list = @$ 'ul.list'
-    @collection.each @renderMessage
+    @collection.chain()
+      .reverse()
+      .each(@renderMessage)
+      .value()
+    $('#message').focus()
     @
 
   renderMessage: (message) ->
@@ -40,26 +47,23 @@ class APP.MessagesView extends Backbone.View
       model: message
     @list.append view.render().el
 
-class APP.Controller
+  enterMessage: (ev) ->
+    @sendMessage ev if ev.keyCode is 13
+
+  sendMessage: (ev) ->
+    message = $ '#message'
+    @options.messenger.sendMessage 'static', message.val()
+    message.val ''
+
+class APP.Messenger
   _client       = null
   _subscription = null
-  _messages     = null
-  _messagesView = null
 
   constructor: (@options = {}) ->
     _client = new Faye.Client @options.mount
-    tst = new APP.Message
-      from: 'From'
-      content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec feugiat vulputate ante, sed gravida libero tincidunt vel.'
-    _messages = new APP.Messages [tst]
-    _messagesView = new APP.MessagesView
-      el:         '#messages'
-      collection: _messages
-    _messagesView.render()
 
-  startListening: ->
-    _subscription = _client.subscribe @options.broadcast, (attributes) ->
-      _messages.add(attributes)
+  startListening: (cb) ->
+    _subscription = _client.subscribe @options.broadcast, cb
 
   stopListening: ->
     _subscription?.cancel()
@@ -70,7 +74,15 @@ class APP.Controller
     _client.publish @options.broadcast, data
 
 jQuery ->
-  controller = new APP.Controller
+  messenger = new APP.Messenger
     mount:      '/faye'
     broadcast:  '/rooms/broadcast'
-  controller.startListening()
+
+  messages = new APP.Messages
+  messagesView = new APP.MessagesView
+    el:         '#messages'
+    collection: messages
+    messenger:  messenger
+  messagesView.render()
+  messenger.startListening (attributes) ->
+    messages.add(attributes)

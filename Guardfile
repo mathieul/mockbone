@@ -7,13 +7,11 @@ module Server
   extend self
 
   def start
-    puts 'Starting... '
     %x(thin -e production -R ./config.ru -p 9292 -d start)
     puts 'Thin server started'
   end
 
   def stop
-    puts 'Stopping... '
     pid_file = File.expand_path('../tmp/pids/thin.pid', __FILE__)
     started = File.file?(pid_file)
     if started
@@ -24,7 +22,11 @@ module Server
 end
 
 guard 'shell' do
-  watch(/^app\/.*/) { Server.stop; Server.start }
+  watch /^app\/.*/ do
+    Server.stop
+    Server.start
+    puts "READY."
+  end
 end
 
 Server.stop
