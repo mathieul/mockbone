@@ -80,6 +80,7 @@ class APP.SessionView extends BaseView
   events:
     'keypress .username': 'enterUsername'
     'click    .sign-in':  'signIn'
+    'click    .sign-out': 'signOut'
   template: Handlebars.compile $('#template-session').html()
 
   enterUsername: (ev) -> @signIn ev if ev.keyCode is 13
@@ -98,6 +99,14 @@ class APP.SessionView extends BaseView
       me = APP.session.get 'username'
       data.type = if data.from is me then 'error' else 'notice'
       @_messages.add data
+
+  signOut: (ev) ->
+    ev.preventDefault()
+    @model.unset 'username'
+    @_messages = null
+    $(@_messagesView.el).empty()
+    @_messagesView = null
+    @render()
 
   render: ->
     super()

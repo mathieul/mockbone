@@ -128,7 +128,8 @@
     }
     SessionView.prototype.events = {
       'keypress .username': 'enterUsername',
-      'click    .sign-in': 'signIn'
+      'click    .sign-in': 'signIn',
+      'click    .sign-out': 'signOut'
     };
     SessionView.prototype.template = Handlebars.compile($('#template-session').html());
     SessionView.prototype.enterUsername = function(ev) {
@@ -157,6 +158,14 @@
         data.type = data.from === me ? 'error' : 'notice';
         return this._messages.add(data);
       }, this));
+    };
+    SessionView.prototype.signOut = function(ev) {
+      ev.preventDefault();
+      this.model.unset('username');
+      this._messages = null;
+      $(this._messagesView.el).empty();
+      this._messagesView = null;
+      return this.render();
     };
     SessionView.prototype.render = function() {
       SessionView.__super__.render.call(this);
