@@ -7,10 +7,12 @@
 
   %body
     #container
+      %section#session
       %section#messages
 
     / Templates
     = haml :_messages
+    = haml :_session
 
     / JavaScripts
     %script(src='/faye.js')

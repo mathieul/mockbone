@@ -9,5 +9,5 @@
 
 %script#template-message(type='text/x-handlebars-template')
   %li.message-item
-    .from.error {{from}}
+    .from(class="{{type}}") {{from}}
     .content {{content}}

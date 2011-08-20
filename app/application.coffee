@@ -1,11 +1,7 @@
 root = global? or window
 root.APP = {}
 
-class APP.Message extends Backbone.Model
-
-class APP.MessageView extends Backbone.View
-  template: Handlebars.compile $('#template-message').html()
-
+class BaseView extends Backbone.View
   constructor: (options) ->
     super options
     _.bindAll @, 'render'
@@ -15,6 +11,11 @@ class APP.MessageView extends Backbone.View
       .empty()
       .html(@template(@model.toJSON()))
     @
+
+class APP.Message extends Backbone.Model
+
+class APP.MessageView extends BaseView
+  template: Handlebars.compile $('#template-message').html()
 
 class APP.Messages extends Backbone.Collection
   model: APP.Message
@@ -47,12 +48,12 @@ class APP.MessagesView extends Backbone.View
       model: message
     @list.append view.render().el
 
-  enterMessage: (ev) ->
-    @sendMessage ev if ev.keyCode is 13
+  enterMessage: (ev) -> @sendMessage ev if ev.keyCode is 13
 
   sendMessage: (ev) ->
     message = $ '#message'
-    @options.messenger.sendMessage 'static', message.val()
+    who = APP.session.get 'username'
+    APP.messenger.sendMessage who, message.val()
     message.val ''
 
 class APP.Messenger
@@ -73,16 +74,46 @@ class APP.Messenger
     console.log 'sending: ', data
     _client.publish @options.broadcast, data
 
-jQuery ->
-  messenger = new APP.Messenger
-    mount:      '/faye'
-    broadcast:  '/rooms/broadcast'
+class APP.Session extends Backbone.Model
 
-  messages = new APP.Messages
-  messagesView = new APP.MessagesView
-    el:         '#messages'
-    collection: messages
-    messenger:  messenger
-  messagesView.render()
-  messenger.startListening (attributes) ->
-    messages.add(attributes)
+class APP.SessionView extends BaseView
+  events:
+    'keypress .username': 'enterUsername'
+    'click    .sign-in':  'signIn'
+  template: Handlebars.compile $('#template-session').html()
+
+  enterUsername: (ev) -> @signIn ev if ev.keyCode is 13
+
+  signIn: (ev) ->
+    username = @$('.username').val().trim()
+    return if username is ''
+    @model.set username: username
+    @render()
+    @renderMessages()
+    APP.messenger = new APP.Messenger
+      mount:      '/faye'
+      broadcast:  '/rooms/broadcast'
+
+    APP.messenger.startListening (data) =>
+      me = APP.session.get 'username'
+      data.type = if data.from is me then 'error' else 'notice'
+      @_messages.add data
+
+  render: ->
+    super()
+    @$('.username').focus()
+
+  renderMessages: ->
+    @_messages = new APP.Messages
+    @_messagesView = new APP.MessagesView
+      el:         '#messages'
+      collection: @_messages
+    @_messagesView.render()
+
+jQuery ->
+  APP.session = new APP.Session
+    username: null
+  sessionView = new APP.SessionView
+    el: '#session'
+    model: APP.session
+  sessionView.render()

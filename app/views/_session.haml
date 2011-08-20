@@ -1,0 +1,12 @@
+%script#template-session(type='text/x-handlebars-template')
+  {{#if username}}
+  %p
+    Hello {{username}} -
+    %a.logout(href='javascript:void(0)') Sign Out
+  {{else}}
+  %p
+    Enter your username
+    %input.username(type='text')
+    and
+    %input.sign-in(type='submit' value='Sign In')
+  {{/if}}
