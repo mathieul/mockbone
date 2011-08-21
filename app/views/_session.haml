@@ -1,12 +1,17 @@
 %script#template-session(type='text/x-handlebars-template')
-  {{#if username}}
-  %p
-    Hello {{username}} -
-    %a.sign-out(href='javascript:void(0)') Sign Out
-  {{else}}
-  %p
-    Enter your username
-    %input.username(type='text')
-    and
-    %input.sign-in(type='submit' value='Sign In')
-  {{/if}}
+  %fieldset
+    %h5.legend Account Information
+    {{#if username}}
+    %p
+      .error(style='display: inline-block') {{username}}
+    %p
+      status: Signed-in
+    %p
+      %a.sign-out(href='javascript:void(0)') Sign Out
+    {{else}}
+    %p
+      Enter your username
+      %input.username(type='text')
+      and
+      %input.sign-in(type='submit' value='Sign In')
+    {{/if}}

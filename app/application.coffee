@@ -100,6 +100,7 @@ class APP.SessionView extends BaseView
 
   signOut: (ev) ->
     ev.preventDefault()
+    APP.messenger.stopListening: (cb) ->
     @model.unset 'username'
     @_messages = null
     $(@_messagesView.el).empty()

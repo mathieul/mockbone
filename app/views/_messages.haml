@@ -1,11 +1,11 @@
 %script#template-messages(type='text/x-handlebars-template')
-  %header
-    %h1 Messages
-  %ul.list
-  %hr
-  %p
-    %input#message(type='text' name='message')
-    %input#send(type='submit' name='send' value='Send')
+  %fieldset
+    %h5.legend Messages
+    %ul.list
+    %hr
+    %p
+      %input#message(type='text' name='message')
+      %input#send(type='submit' name='send' value='Send')
 
 %script#template-message(type='text/x-handlebars-template')
   %li.message-item
