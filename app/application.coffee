@@ -60,15 +60,24 @@ class APP.MessagesView extends Backbone.View
 class APP.Messenger
   _client       = null
   _subscription = null
+  _username     = null
 
   constructor: (@options = {}) ->
     _client = new Faye.Client @options.mount
+    _client.addExtension
+      outgoing: (message, callback) ->
+        return callback message unless message.channel is '/meta/subscribe'
+        message.ext ?= {}
+        message.ext.username = _username
+        callback message
 
-  startListening: (cb) ->
+  startListening: (username, cb) ->
+    _username = username
     _subscription = _client.subscribe @options.broadcast, cb
 
   stopListening: ->
-    _subscription?.cancel()
+    _client.unsubscribe @options.broadcast
+    _client.disconnect()
 
   sendMessage: (from, content) =>
     data = {from, content}
@@ -101,12 +110,13 @@ class APP.SessionView extends BaseView
       mount:      '/faye'
       broadcast:  '/rooms/broadcast'
 
-    APP.messenger.startListening (data) =>
+    APP.messenger.startListening {username: username}, (data) =>
       me = APP.session.get 'username'
       data.type = if data.from is me then 'error' else 'notice'
       @_messages.add data
 
-  signOut: ->
+  signOut: (ev) ->
+    ev.preventDefault()
     APP.messenger.stopListening()
     @_messages = null
     $(@_messagesView.el).empty()

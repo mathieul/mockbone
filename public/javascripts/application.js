@@ -94,19 +94,35 @@
     return MessagesView;
   })();
   APP.Messenger = (function() {
-    var _client, _subscription;
+    var _client, _subscription, _username;
     _client = null;
     _subscription = null;
+    _username = null;
     function Messenger(options) {
       this.options = options != null ? options : {};
       this.sendMessage = __bind(this.sendMessage, this);
       _client = new Faye.Client(this.options.mount);
+      _client.addExtension({
+        outgoing: function(message, callback) {
+          var _ref;
+          if (message.channel !== '/meta/subscribe') {
+            return callback(message);
+          }
+          if ((_ref = message.ext) == null) {
+            message.ext = {};
+          }
+          message.ext.username = _username;
+          return callback(message);
+        }
+      });
     }
-    Messenger.prototype.startListening = function(cb) {
+    Messenger.prototype.startListening = function(username, cb) {
+      _username = username;
       return _subscription = _client.subscribe(this.options.broadcast, cb);
     };
     Messenger.prototype.stopListening = function() {
-      return _subscription != null ? _subscription.cancel() : void 0;
+      _client.unsubscribe(this.options.broadcast);
+      return _client.disconnect();
     };
     Messenger.prototype.sendMessage = function(from, content) {
       var data;
@@ -161,14 +177,17 @@
         mount: '/faye',
         broadcast: '/rooms/broadcast'
       });
-      return APP.messenger.startListening(__bind(function(data) {
+      return APP.messenger.startListening({
+        username: username
+      }, __bind(function(data) {
         var me;
         me = APP.session.get('username');
         data.type = data.from === me ? 'error' : 'notice';
         return this._messages.add(data);
       }, this));
     };
-    SessionView.prototype.signOut = function() {
+    SessionView.prototype.signOut = function(ev) {
+      ev.preventDefault();
       APP.messenger.stopListening();
       this._messages = null;
       $(this._messagesView.el).empty();
