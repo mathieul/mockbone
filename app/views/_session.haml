@@ -1,13 +1,14 @@
 %script#template-session(type='text/x-handlebars-template')
   %fieldset
     %h5.legend Account Information
+    %br
     {{#if username}}
     %p
-      .error(style='display: inline-block') {{username}}
+      Username
+      %strong {{username}}
     %p
-      status: Signed-in
-    %p
-      %a.sign-out(href='javascript:void(0)') Sign Out
+      Status
+      %strong Signed-in
     {{else}}
     %p
       Enter your username

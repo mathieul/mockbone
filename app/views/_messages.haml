@@ -5,7 +5,12 @@
     %hr
     %p
       %input#message(type='text' name='message')
-      %input#send(type='submit' name='send' value='Send')
+      %fieldset.buttons
+        %ol
+          %li.commit
+            %input#send(type='submit' name='send' value='Send')
+          %li
+            %a.sign-out(href='javascript:void(0)') Sign Out
 
 %script#template-message(type='text/x-handlebars-template')
   %li.message-item

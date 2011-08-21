@@ -24,6 +24,7 @@ class APP.MessagesView extends Backbone.View
   events:
     'click #send':        'sendMessage'
     'keypress #message':  'enterMessage'
+    'click .sign-out':    'signOut'
   template: Handlebars.compile $('#template-messages').html()
 
   constructor: (options) ->
@@ -54,6 +55,8 @@ class APP.MessagesView extends Backbone.View
     APP.messenger.sendMessage who, message.val()
     message.val ''
 
+  signOut: (ev) -> APP.session.unset 'username'
+
 class APP.Messenger
   _client       = null
   _subscription = null
@@ -78,8 +81,13 @@ class APP.SessionView extends BaseView
   events:
     'keypress .username': 'enterUsername'
     'click    .sign-in':  'signIn'
-    'click    .sign-out': 'signOut'
   template: Handlebars.compile $('#template-session').html()
+
+  constructor: (options) ->
+    super options
+    @model.bind 'change:username', (model, value) =>
+      @signOut() if value is undefined
+
 
   enterUsername: (ev) -> @signIn ev if ev.keyCode is 13
 
@@ -98,10 +106,8 @@ class APP.SessionView extends BaseView
       data.type = if data.from is me then 'error' else 'notice'
       @_messages.add data
 
-  signOut: (ev) ->
-    ev.preventDefault()
-    APP.messenger.stopListening: (cb) ->
-    @model.unset 'username'
+  signOut: ->
+    APP.messenger.stopListening()
     @_messages = null
     $(@_messagesView.el).empty()
     @_messagesView = null

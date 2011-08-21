@@ -49,7 +49,8 @@
     __extends(MessagesView, Backbone.View);
     MessagesView.prototype.events = {
       'click #send': 'sendMessage',
-      'keypress #message': 'enterMessage'
+      'keypress #message': 'enterMessage',
+      'click .sign-out': 'signOut'
     };
     MessagesView.prototype.template = Handlebars.compile($('#template-messages').html());
     function MessagesView(options) {
@@ -86,6 +87,9 @@
       who = APP.session.get('username');
       APP.messenger.sendMessage(who, message.val());
       return message.val('');
+    };
+    MessagesView.prototype.signOut = function(ev) {
+      return APP.session.unset('username');
     };
     return MessagesView;
   })();
@@ -124,15 +128,19 @@
   })();
   APP.SessionView = (function() {
     __extends(SessionView, BaseView);
-    function SessionView() {
-      SessionView.__super__.constructor.apply(this, arguments);
-    }
     SessionView.prototype.events = {
       'keypress .username': 'enterUsername',
-      'click    .sign-in': 'signIn',
-      'click    .sign-out': 'signOut'
+      'click    .sign-in': 'signIn'
     };
     SessionView.prototype.template = Handlebars.compile($('#template-session').html());
+    function SessionView(options) {
+      SessionView.__super__.constructor.call(this, options);
+      this.model.bind('change:username', __bind(function(model, value) {
+        if (value === void 0) {
+          return this.signOut();
+        }
+      }, this));
+    }
     SessionView.prototype.enterUsername = function(ev) {
       if (ev.keyCode === 13) {
         return this.signIn(ev);
@@ -160,9 +168,8 @@
         return this._messages.add(data);
       }, this));
     };
-    SessionView.prototype.signOut = function(ev) {
-      ev.preventDefault();
-      this.model.unset('username');
+    SessionView.prototype.signOut = function() {
+      APP.messenger.stopListening();
       this._messages = null;
       $(this._messagesView.el).empty();
       this._messagesView = null;
