@@ -24,10 +24,12 @@ Assuming you use RVM and homebrew (on MacOSX):
 To run the application in development mode (it is reloaded when changes
 are made and coffeescript file(s) are compiled when changed:
 
-    $ thin -e production -R ./config.ru -p 9292 -d start
+    $ guard
 
 **Note**: thin must run in production mode as its development mode is not
 compatible with websockets.
+
+To stop it just press Ctrl-C.
 
 ### Production Mode ###
 
