@@ -89,19 +89,19 @@
     return MessagesView;
   })();
   Messenger = (function() {
-    var _client, _subscription, _username;
-    _client = null;
-    _subscription = null;
-    _username = null;
     function Messenger(options) {
       this.options = options != null ? options : {
         mount: '/faye',
         broadcast: '/rooms/broadcast'
       };
       this.sendMessage = __bind(this.sendMessage, this);
-      _client = new Faye.Client(this.options.mount);
-      _client.addExtension({
-        outgoing: function(message, callback) {
+      this._client = new Faye.Client(this.options.mount);
+      this._client.addExtension({
+        incoming: function(message, callback) {
+          console.log("incoming: " + (JSON.stringify(message)));
+          return callback(message);
+        },
+        outgoing: __bind(function(message, callback) {
           var _ref;
           if (message.channel !== '/meta/subscribe') {
             return callback(message);
@@ -109,20 +109,20 @@
           if ((_ref = message.ext) == null) {
             message.ext = {};
           }
-          message.ext.username = _username;
+          message.ext.username = this._username;
           return callback(message);
-        }
+        }, this)
       });
     }
     Messenger.prototype.startListening = function(username, cb) {
-      _username = username;
-      return _subscription = _client.subscribe(this.options.broadcast, cb);
+      this._username = username;
+      return this._client.subscribe(this.options.broadcast, cb);
     };
     Messenger.prototype.stopListening = function() {
-      return _client.unsubscribe(this.options.broadcast);
+      return this._client.unsubscribe(this.options.broadcast);
     };
     Messenger.prototype.sendMessage = function(content) {
-      return _client.publish(this.options.broadcast, {
+      return this._client.publish(this.options.broadcast, {
         content: content
       });
     };
@@ -144,12 +144,11 @@
     SessionView.prototype.template = Handlebars.compile($('#template-session').html());
     function SessionView(options) {
       SessionView.__super__.constructor.call(this, options);
-      this.messenger = new Messenger;
       this.model.bind('change:username', __bind(function(model, username) {
         if (username != null) {
           this.render();
           this.renderMessages();
-          return this.messenger.startListening(username, __bind(function(data) {
+          return this.options.messenger.startListening(username, __bind(function(data) {
             var me;
             me = this.model.get('username');
             data.type = data.from === me ? 'error' : 'notice';
@@ -176,7 +175,7 @@
     };
     SessionView.prototype.signOut = function() {
       var _ref;
-      this.messenger.stopListening();
+      this.options.messenger.stopListening();
       this.messagesView.remove();
       _ref = [null, null], this.messages = _ref[0], this.messagesView = _ref[1];
       return this.render();
@@ -189,7 +188,7 @@
       this.messages = new Messages;
       this.messagesView = new MessagesView({
         collection: this.messages,
-        messenger: this.messenger,
+        messenger: this.options.messenger,
         session: this.model
       });
       $('#messages').empty().append(this.messagesView.el);
@@ -198,13 +197,15 @@
     return SessionView;
   })();
   jQuery(function() {
-    var session, sessionView;
+    var messenger, session, sessionView;
     session = new Session({
       username: null
     });
+    messenger = new Messenger;
     sessionView = new SessionView({
       el: '#session',
-      model: session
+      model: session,
+      messenger: messenger
     });
     return sessionView.render();
   });

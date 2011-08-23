@@ -59,29 +59,28 @@ class MessagesView extends Backbone.View
   signOut: (ev) -> @options.session.unset 'username'
 
 class Messenger
-  _client       = null
-  _subscription = null
-  _username     = null
-
   constructor: (@options = {mount: '/faye', broadcast: '/rooms/broadcast'}) ->
-    _client = new Faye.Client @options.mount
-    _client.addExtension
-      outgoing: (message, callback) ->
+    @_client = new Faye.Client @options.mount
+    @_client.addExtension
+      incoming: (message, callback) ->
+        console.log "incoming: #{JSON.stringify message}"
+        callback message
+
+      outgoing: (message, callback) =>
         return callback message unless message.channel is '/meta/subscribe'
         message.ext ?= {}
-        message.ext.username = _username
+        message.ext.username = @_username
         callback message
 
   startListening: (username, cb) ->
-    _username = username
-    _subscription = _client.subscribe @options.broadcast, cb
+    @_username = username
+    @_client.subscribe @options.broadcast, cb
 
   stopListening: ->
-    _client.unsubscribe @options.broadcast
-    # _client.disconnect()
+    @_client.unsubscribe @options.broadcast
 
   sendMessage: (content) =>
-    _client.publish @options.broadcast, {content}
+    @_client.publish @options.broadcast, {content}
 
 class Session extends Backbone.Model
 
@@ -94,12 +93,11 @@ class SessionView extends BaseView
 
   constructor: (options) ->
     super options
-    @messenger = new Messenger
     @model.bind 'change:username', (model, username) =>
       if username?
         @render()
         @renderMessages()
-        @messenger.startListening username, (data) =>
+        @options.messenger.startListening username, (data) =>
           me = @model.get 'username'
           data.type = if data.from is me then 'error' else 'notice'
           @messages.add data
@@ -113,7 +111,7 @@ class SessionView extends BaseView
     @model.set(username: username) unless username is ''
 
   signOut: ->
-    @messenger.stopListening()
+    @options.messenger.stopListening()
     @messagesView.remove()
     [@messages, @messagesView ] = [null, null]
     @render()
@@ -126,15 +124,17 @@ class SessionView extends BaseView
     @messages = new Messages
     @messagesView = new MessagesView
       collection: @messages
-      messenger:  @messenger
+      messenger:  @options.messenger
       session:    @model
     $('#messages').empty().append @messagesView.el
     @messagesView.render()
 
 jQuery ->
-  session = new Session
-    username: null
+  session     = new Session {username: null}
+  messenger   = new Messenger
   sessionView = new SessionView
-    el: '#session'
-    model: session
+    el:        '#session'
+    model:     session
+    messenger: messenger
+
   sessionView.render()

@@ -1,20 +1,40 @@
 # README #
 
-## Run ##
+## Dependencies ##
 
-    $ rackup config.ru -s thin -E production
+You need Redis for this application. It is used by the Faye redis engine
+to store client state (allow more than one web server). It is also used
+to save the username for each client.
 
-## Faye ##
+Redis configuration can be changed in config.ru (REDIS\_CONFIG) .
 
-In the browser, subscribe with:
+## Installation ##
 
-    var client = new Faye.Client('/faye');
-    var subscription = client.subscribe('/the-channel', function (msg) { console.log(msg); })
+Assuming you use RVM and homebrew (on MacOSX):
 
-Send a message with:
+    $ rvm use 1.9.2-p290@mockbone --create   # not necessary if no RVM or RVM is configured to use .rvmrc
+    $ gem install bundler
+    $ bundle
+    $ brew install redis                     # if redis is not installed already
 
-    client.publish('/the-channel', {msg: 'something for everybody'});
+## Running the Application ##
 
-Unsubscribe with:
+### Development Mode ###
 
-    subscription.cancel();
+To run the application in development mode (it is reloaded when changes
+are made and coffeescript file(s) are compiled when changed:
+
+    $ thin -e production -R ./config.ru -p 9292 -d start
+
+**Note**: thin must run in production mode as its development mode is not
+compatible with websockets.
+
+### Production Mode ###
+
+Or to run the application in production mode:
+
+    $ thin -e production -R ./config.ru -p 9292 -d start
+
+and stop it with:
+
+    $ thin stop
