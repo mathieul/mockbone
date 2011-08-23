@@ -1,5 +1,7 @@
-root = global? or window
-root.APP = {}
+# Use APP as the application namespace if you need to export
+# variables below so they can be accessed from another file:
+# root = global? or window
+# root.APP = {}
 
 class BaseView extends Backbone.View
   constructor: (options) ->
@@ -12,15 +14,15 @@ class BaseView extends Backbone.View
       .html(@template(@model.toJSON()))
     @
 
-class APP.Message extends Backbone.Model
+class Message extends Backbone.Model
 
-class APP.MessageView extends BaseView
+class MessageView extends BaseView
   template: Handlebars.compile $('#template-message').html()
 
-class APP.Messages extends Backbone.Collection
-  model: APP.Message
+class Messages extends Backbone.Collection
+  model: Message
 
-class APP.MessagesView extends Backbone.View
+class MessagesView extends Backbone.View
   events:
     'click #send':        'sendMessage'
     'keypress #message':  'enterMessage'
@@ -43,7 +45,7 @@ class APP.MessagesView extends Backbone.View
     @
 
   renderMessage: (message) ->
-    view = new APP.MessageView
+    view = new MessageView
       model: message
     @list.append view.render().el
 
@@ -51,25 +53,25 @@ class APP.MessagesView extends Backbone.View
 
   sendMessage: (ev) ->
     message = $ '#message'
-    who = APP.session.get 'username'
-    APP.messenger.sendMessage who, message.val()
+    who = @options.session.get 'username'
+    @options.messenger.sendMessage who, message.val()
     message.val ''
 
-  signOut: (ev) -> APP.session.unset 'username'
+  signOut: (ev) -> @options.session.unset 'username'
 
-class APP.Messenger
+class Messenger
   _client       = null
   _subscription = null
   _username     = null
 
-  constructor: (@options = {}) ->
+  constructor: (@options = {mount: '/faye', broadcast: '/rooms/broadcast'}) ->
     _client = new Faye.Client @options.mount
-    _client.addExtension
-      outgoing: (message, callback) ->
-        return callback message unless message.channel is '/meta/subscribe'
-        message.ext ?= {}
-        message.ext.username = _username
-        callback message
+    # _client.addExtension
+    #   outgoing: (message, callback) ->
+    #     return callback message unless message.channel is '/meta/subscribe'
+    #     message.ext ?= {}
+    #     message.ext.username = _username
+    #     callback message
 
   startListening: (username, cb) ->
     _username = username
@@ -84,43 +86,39 @@ class APP.Messenger
     console.log 'sending: ', data
     _client.publish @options.broadcast, data
 
-class APP.Session extends Backbone.Model
+class Session extends Backbone.Model
 
-class APP.SessionView extends BaseView
+class SessionView extends BaseView
   events:
     'keypress .username': 'enterUsername'
     'click    .sign-in':  'signIn'
+
   template: Handlebars.compile $('#template-session').html()
 
   constructor: (options) ->
     super options
-    @model.bind 'change:username', (model, value) =>
-      @signOut() if value is undefined
-
+    @messenger = new Messenger
+    @model.bind 'change:username', (model, username) =>
+      if username?
+        @render()
+        @renderMessages()
+        @messenger.startListening {username: username}, (data) =>
+          me = @model.get 'username'
+          data.type = if data.from is me then 'error' else 'notice'
+          @messages.add data
+      else
+        @signOut()
 
   enterUsername: (ev) -> @signIn ev if ev.keyCode is 13
 
   signIn: (ev) ->
     username = @$('.username').val().trim()
-    return if username is ''
-    @model.set username: username
-    @render()
-    @renderMessages()
-    APP.messenger = new APP.Messenger
-      mount:      '/faye'
-      broadcast:  '/rooms/broadcast'
+    @model.set(username: username) unless username is ''
 
-    APP.messenger.startListening {username: username}, (data) =>
-      me = APP.session.get 'username'
-      data.type = if data.from is me then 'error' else 'notice'
-      @_messages.add data
-
-  signOut: (ev) ->
-    ev.preventDefault()
-    APP.messenger.stopListening()
-    @_messages = null
-    $(@_messagesView.el).empty()
-    @_messagesView = null
+  signOut: ->
+    @messenger.stopListening()
+    @messagesView.remove()
+    [@messages, @messagesView ] = [null, null]
     @render()
 
   render: ->
@@ -128,16 +126,18 @@ class APP.SessionView extends BaseView
     @$('.username').focus()
 
   renderMessages: ->
-    @_messages = new APP.Messages
-    @_messagesView = new APP.MessagesView
-      el:         '#messages'
-      collection: @_messages
-    @_messagesView.render()
+    @messages = new Messages
+    @messagesView = new MessagesView
+      collection: @messages
+      messenger:  @messenger
+      session:    @model
+    $('#messages').empty().append @messagesView.el
+    @messagesView.render()
 
 jQuery ->
-  APP.session = new APP.Session
+  session = new Session
     username: null
-  sessionView = new APP.SessionView
+  sessionView = new SessionView
     el: '#session'
-    model: APP.session
+    model: session
   sessionView.render()

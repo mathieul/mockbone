@@ -1,5 +1,5 @@
 (function() {
-  var BaseView, root;
+  var BaseView, Message, MessageView, Messages, MessagesView, Messenger, Session, SessionView;
   var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
     for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
     function ctor() { this.constructor = child; }
@@ -8,8 +8,6 @@
     child.__super__ = parent.prototype;
     return child;
   }, __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
-  root = (typeof global !== "undefined" && global !== null) || window;
-  root.APP = {};
   BaseView = (function() {
     __extends(BaseView, Backbone.View);
     function BaseView(options) {
@@ -22,14 +20,14 @@
     };
     return BaseView;
   })();
-  APP.Message = (function() {
+  Message = (function() {
     __extends(Message, Backbone.Model);
     function Message() {
       Message.__super__.constructor.apply(this, arguments);
     }
     return Message;
   })();
-  APP.MessageView = (function() {
+  MessageView = (function() {
     __extends(MessageView, BaseView);
     function MessageView() {
       MessageView.__super__.constructor.apply(this, arguments);
@@ -37,15 +35,15 @@
     MessageView.prototype.template = Handlebars.compile($('#template-message').html());
     return MessageView;
   })();
-  APP.Messages = (function() {
+  Messages = (function() {
     __extends(Messages, Backbone.Collection);
     function Messages() {
       Messages.__super__.constructor.apply(this, arguments);
     }
-    Messages.prototype.model = APP.Message;
+    Messages.prototype.model = Message;
     return Messages;
   })();
-  APP.MessagesView = (function() {
+  MessagesView = (function() {
     __extends(MessagesView, Backbone.View);
     MessagesView.prototype.events = {
       'click #send': 'sendMessage',
@@ -71,7 +69,7 @@
     };
     MessagesView.prototype.renderMessage = function(message) {
       var view;
-      view = new APP.MessageView({
+      view = new MessageView({
         model: message
       });
       return this.list.append(view.render().el);
@@ -84,37 +82,27 @@
     MessagesView.prototype.sendMessage = function(ev) {
       var message, who;
       message = $('#message');
-      who = APP.session.get('username');
-      APP.messenger.sendMessage(who, message.val());
+      who = this.options.session.get('username');
+      this.options.messenger.sendMessage(who, message.val());
       return message.val('');
     };
     MessagesView.prototype.signOut = function(ev) {
-      return APP.session.unset('username');
+      return this.options.session.unset('username');
     };
     return MessagesView;
   })();
-  APP.Messenger = (function() {
+  Messenger = (function() {
     var _client, _subscription, _username;
     _client = null;
     _subscription = null;
     _username = null;
     function Messenger(options) {
-      this.options = options != null ? options : {};
+      this.options = options != null ? options : {
+        mount: '/faye',
+        broadcast: '/rooms/broadcast'
+      };
       this.sendMessage = __bind(this.sendMessage, this);
       _client = new Faye.Client(this.options.mount);
-      _client.addExtension({
-        outgoing: function(message, callback) {
-          var _ref;
-          if (message.channel !== '/meta/subscribe') {
-            return callback(message);
-          }
-          if ((_ref = message.ext) == null) {
-            message.ext = {};
-          }
-          message.ext.username = _username;
-          return callback(message);
-        }
-      });
     }
     Messenger.prototype.startListening = function(username, cb) {
       _username = username;
@@ -135,14 +123,14 @@
     };
     return Messenger;
   })();
-  APP.Session = (function() {
+  Session = (function() {
     __extends(Session, Backbone.Model);
     function Session() {
       Session.__super__.constructor.apply(this, arguments);
     }
     return Session;
   })();
-  APP.SessionView = (function() {
+  SessionView = (function() {
     __extends(SessionView, BaseView);
     SessionView.prototype.events = {
       'keypress .username': 'enterUsername',
@@ -151,8 +139,20 @@
     SessionView.prototype.template = Handlebars.compile($('#template-session').html());
     function SessionView(options) {
       SessionView.__super__.constructor.call(this, options);
-      this.model.bind('change:username', __bind(function(model, value) {
-        if (value === void 0) {
+      this.messenger = new Messenger;
+      this.model.bind('change:username', __bind(function(model, username) {
+        if (username != null) {
+          this.render();
+          this.renderMessages();
+          return this.messenger.startListening({
+            username: username
+          }, __bind(function(data) {
+            var me;
+            me = this.model.get('username');
+            data.type = data.from === me ? 'error' : 'notice';
+            return this.messages.add(data);
+          }, this));
+        } else {
           return this.signOut();
         }
       }, this));
@@ -165,33 +165,17 @@
     SessionView.prototype.signIn = function(ev) {
       var username;
       username = this.$('.username').val().trim();
-      if (username === '') {
-        return;
+      if (username !== '') {
+        return this.model.set({
+          username: username
+        });
       }
-      this.model.set({
-        username: username
-      });
-      this.render();
-      this.renderMessages();
-      APP.messenger = new APP.Messenger({
-        mount: '/faye',
-        broadcast: '/rooms/broadcast'
-      });
-      return APP.messenger.startListening({
-        username: username
-      }, __bind(function(data) {
-        var me;
-        me = APP.session.get('username');
-        data.type = data.from === me ? 'error' : 'notice';
-        return this._messages.add(data);
-      }, this));
     };
-    SessionView.prototype.signOut = function(ev) {
-      ev.preventDefault();
-      APP.messenger.stopListening();
-      this._messages = null;
-      $(this._messagesView.el).empty();
-      this._messagesView = null;
+    SessionView.prototype.signOut = function() {
+      var _ref;
+      this.messenger.stopListening();
+      this.messagesView.remove();
+      _ref = [null, null], this.messages = _ref[0], this.messagesView = _ref[1];
       return this.render();
     };
     SessionView.prototype.render = function() {
@@ -199,23 +183,25 @@
       return this.$('.username').focus();
     };
     SessionView.prototype.renderMessages = function() {
-      this._messages = new APP.Messages;
-      this._messagesView = new APP.MessagesView({
-        el: '#messages',
-        collection: this._messages
+      this.messages = new Messages;
+      this.messagesView = new MessagesView({
+        collection: this.messages,
+        messenger: this.messenger,
+        session: this.model
       });
-      return this._messagesView.render();
+      $('#messages').empty().append(this.messagesView.el);
+      return this.messagesView.render();
     };
     return SessionView;
   })();
   jQuery(function() {
-    var sessionView;
-    APP.session = new APP.Session({
+    var session, sessionView;
+    session = new Session({
       username: null
     });
-    sessionView = new APP.SessionView({
+    sessionView = new SessionView({
       el: '#session',
-      model: APP.session
+      model: session
     });
     return sessionView.render();
   });
