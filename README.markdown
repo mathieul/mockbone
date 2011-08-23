@@ -1,5 +1,11 @@
 # README #
 
+Mockbone is a basic test application intended to test Backbone model,
+collection and view classes.
+
+It allows to sign in to a global broadcast channel and send and receive
+text messages.
+
 ## Dependencies ##
 
 You need Redis for this application. It is used by the Faye redis engine
