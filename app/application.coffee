@@ -46,14 +46,16 @@ class MessagesView extends Backbone.View
     @
 
   renderMessage: (message) ->
-    view = new MessageView
-      model: message
+    view = new MessageView {model: message}
     @list.append view.render().el
 
   enterMessage: (ev) -> @sendMessage ev if ev.keyCode is 13
 
   sendMessage: (ev) ->
-    @options.messenger.sendMessage @messageField.val()
+    ev.preventDefault()
+    message = @messageField.val().trim()
+    return if message is ''
+    @options.messenger.sendMessage message
     @messageField.val ''
 
   signOut: (ev) -> @options.session.unset 'username'

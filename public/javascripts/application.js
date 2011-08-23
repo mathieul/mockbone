@@ -80,7 +80,13 @@
       }
     };
     MessagesView.prototype.sendMessage = function(ev) {
-      this.options.messenger.sendMessage(this.messageField.val());
+      var message;
+      ev.preventDefault();
+      message = this.messageField.val().trim();
+      if (message === '') {
+        return;
+      }
+      this.options.messenger.sendMessage(message);
       return this.messageField.val('');
     };
     MessagesView.prototype.signOut = function(ev) {
