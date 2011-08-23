@@ -64,7 +64,7 @@
       this.list = this.$('ul.list');
       this.collection.each(this.renderMessage);
       this.list[0].scrollTop = this.list[0].scrollHeight;
-      $('#message').focus();
+      this.messageField = $('#message').focus();
       return this;
     };
     MessagesView.prototype.renderMessage = function(message) {
@@ -80,11 +80,8 @@
       }
     };
     MessagesView.prototype.sendMessage = function(ev) {
-      var message, who;
-      message = $('#message');
-      who = this.options.session.get('username');
-      this.options.messenger.sendMessage(who, message.val());
-      return message.val('');
+      this.options.messenger.sendMessage(this.messageField.val());
+      return this.messageField.val('');
     };
     MessagesView.prototype.signOut = function(ev) {
       return this.options.session.unset('username');
@@ -103,23 +100,31 @@
       };
       this.sendMessage = __bind(this.sendMessage, this);
       _client = new Faye.Client(this.options.mount);
+      _client.addExtension({
+        outgoing: function(message, callback) {
+          var _ref;
+          if (message.channel !== '/meta/subscribe') {
+            return callback(message);
+          }
+          if ((_ref = message.ext) == null) {
+            message.ext = {};
+          }
+          message.ext.username = _username;
+          return callback(message);
+        }
+      });
     }
     Messenger.prototype.startListening = function(username, cb) {
       _username = username;
       return _subscription = _client.subscribe(this.options.broadcast, cb);
     };
     Messenger.prototype.stopListening = function() {
-      _client.unsubscribe(this.options.broadcast);
-      return _client.disconnect();
+      return _client.unsubscribe(this.options.broadcast);
     };
-    Messenger.prototype.sendMessage = function(from, content) {
-      var data;
-      data = {
-        from: from,
+    Messenger.prototype.sendMessage = function(content) {
+      return _client.publish(this.options.broadcast, {
         content: content
-      };
-      console.log('sending: ', data);
-      return _client.publish(this.options.broadcast, data);
+      });
     };
     return Messenger;
   })();
@@ -144,9 +149,7 @@
         if (username != null) {
           this.render();
           this.renderMessages();
-          return this.messenger.startListening({
-            username: username
-          }, __bind(function(data) {
+          return this.messenger.startListening(username, __bind(function(data) {
             var me;
             me = this.model.get('username');
             data.type = data.from === me ? 'error' : 'notice';
