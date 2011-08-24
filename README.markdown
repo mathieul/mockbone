@@ -25,6 +25,9 @@ Assuming you use RVM and homebrew (on MacOSX):
 
 ## Running the Application ##
 
+Run the application in development or production mode, and open browser
+windows at URL: *http://localhost:9292*.
+
 ### Development Mode ###
 
 To run the application in development mode (it is reloaded when changes

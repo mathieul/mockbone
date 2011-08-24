@@ -1,13 +1,55 @@
 (function() {
+  /*
+   Messenger: class used to communicate with the server
+  */
   var BaseView, Message, MessageView, Messages, MessagesView, Messenger, Session, SessionView;
-  var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; }, __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) {
     for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; }
     function ctor() { this.constructor = child; }
     ctor.prototype = parent.prototype;
     child.prototype = new ctor;
     child.__super__ = parent.prototype;
     return child;
-  }, __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+  };
+  Messenger = (function() {
+    function Messenger(options) {
+      this.options = options != null ? options : {
+        mount: '/faye',
+        broadcast: '/rooms/broadcast'
+      };
+      this.sendMessage = __bind(this.sendMessage, this);
+      this._client = new Faye.Client(this.options.mount);
+      this._client.addExtension({
+        outgoing: __bind(function(message, callback) {
+          var _ref;
+          if (message.channel !== '/meta/subscribe') {
+            return callback(message);
+          }
+          if ((_ref = message.ext) == null) {
+            message.ext = {};
+          }
+          message.ext.username = this._username;
+          return callback(message);
+        }, this)
+      });
+    }
+    Messenger.prototype.startListening = function(username, cb) {
+      this._username = username;
+      return this._client.subscribe(this.options.broadcast, cb);
+    };
+    Messenger.prototype.stopListening = function() {
+      return this._client.unsubscribe(this.options.broadcast);
+    };
+    Messenger.prototype.sendMessage = function(content) {
+      return this._client.publish(this.options.broadcast, {
+        content: content
+      });
+    };
+    return Messenger;
+  })();
+  /*
+   Base view: base class to extend to inherit common view behaviors
+  */
   BaseView = (function() {
     __extends(BaseView, Backbone.View);
     function BaseView(options) {
@@ -20,6 +62,9 @@
     };
     return BaseView;
   })();
+  /*
+   Message model: data of one message
+  */
   Message = (function() {
     __extends(Message, Backbone.Model);
     function Message() {
@@ -27,6 +72,9 @@
     }
     return Message;
   })();
+  /*
+   Message view: representation of one message in the DOM
+  */
   MessageView = (function() {
     __extends(MessageView, BaseView);
     function MessageView() {
@@ -35,6 +83,9 @@
     MessageView.prototype.template = Handlebars.compile($('#template-message').html());
     return MessageView;
   })();
+  /*
+   Message collection: list of message model instances
+  */
   Messages = (function() {
     __extends(Messages, Backbone.Collection);
     function Messages() {
@@ -43,6 +94,9 @@
     Messages.prototype.model = Message;
     return Messages;
   })();
+  /*
+   Messages view: representation of the list of messages in the DOM
+  */
   MessagesView = (function() {
     __extends(MessagesView, Backbone.View);
     MessagesView.prototype.events = {
@@ -94,46 +148,9 @@
     };
     return MessagesView;
   })();
-  Messenger = (function() {
-    function Messenger(options) {
-      this.options = options != null ? options : {
-        mount: '/faye',
-        broadcast: '/rooms/broadcast'
-      };
-      this.sendMessage = __bind(this.sendMessage, this);
-      this._client = new Faye.Client(this.options.mount);
-      this._client.addExtension({
-        incoming: function(message, callback) {
-          console.log("incoming: " + (JSON.stringify(message)));
-          return callback(message);
-        },
-        outgoing: __bind(function(message, callback) {
-          var _ref;
-          if (message.channel !== '/meta/subscribe') {
-            return callback(message);
-          }
-          if ((_ref = message.ext) == null) {
-            message.ext = {};
-          }
-          message.ext.username = this._username;
-          return callback(message);
-        }, this)
-      });
-    }
-    Messenger.prototype.startListening = function(username, cb) {
-      this._username = username;
-      return this._client.subscribe(this.options.broadcast, cb);
-    };
-    Messenger.prototype.stopListening = function() {
-      return this._client.unsubscribe(this.options.broadcast);
-    };
-    Messenger.prototype.sendMessage = function(content) {
-      return this._client.publish(this.options.broadcast, {
-        content: content
-      });
-    };
-    return Messenger;
-  })();
+  /*
+   Session model: user session attributes
+  */
   Session = (function() {
     __extends(Session, Backbone.Model);
     function Session() {
@@ -141,6 +158,9 @@
     }
     return Session;
   })();
+  /*
+   Session view: user session information in the DOM
+  */
   SessionView = (function() {
     __extends(SessionView, BaseView);
     SessionView.prototype.events = {
@@ -202,6 +222,9 @@
     };
     return SessionView;
   })();
+  /*
+   Main: executed when the document is ready
+  */
   jQuery(function() {
     var messenger, session, sessionView;
     session = new Session({

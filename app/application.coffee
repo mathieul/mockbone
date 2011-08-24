@@ -3,6 +3,32 @@
 # root = global? or window
 # root.APP = {}
 
+###
+ Messenger: class used to communicate with the server
+###
+class Messenger
+  constructor: (@options = {mount: '/faye', broadcast: '/rooms/broadcast'}) ->
+    @_client = new Faye.Client @options.mount
+    @_client.addExtension
+      outgoing: (message, callback) =>
+        return callback message unless message.channel is '/meta/subscribe'
+        message.ext ?= {}
+        message.ext.username = @_username
+        callback message
+
+  startListening: (username, cb) ->
+    @_username = username
+    @_client.subscribe @options.broadcast, cb
+
+  stopListening: ->
+    @_client.unsubscribe @options.broadcast
+
+  sendMessage: (content) =>
+    @_client.publish @options.broadcast, {content}
+
+###
+ Base view: base class to extend to inherit common view behaviors
+###
 class BaseView extends Backbone.View
   constructor: (options) ->
     super options
@@ -14,14 +40,26 @@ class BaseView extends Backbone.View
       .html(@template(@model.toJSON()))
     @
 
+###
+ Message model: data of one message
+###
 class Message extends Backbone.Model
 
+###
+ Message view: representation of one message in the DOM
+###
 class MessageView extends BaseView
   template: Handlebars.compile $('#template-message').html()
 
+###
+ Message collection: list of message model instances
+###
 class Messages extends Backbone.Collection
   model: Message
 
+###
+ Messages view: representation of the list of messages in the DOM
+###
 class MessagesView extends Backbone.View
   events:
     'click #send':        'sendMessage'
@@ -60,32 +98,14 @@ class MessagesView extends Backbone.View
 
   signOut: (ev) -> @options.session.unset 'username'
 
-class Messenger
-  constructor: (@options = {mount: '/faye', broadcast: '/rooms/broadcast'}) ->
-    @_client = new Faye.Client @options.mount
-    @_client.addExtension
-      incoming: (message, callback) ->
-        console.log "incoming: #{JSON.stringify message}"
-        callback message
-
-      outgoing: (message, callback) =>
-        return callback message unless message.channel is '/meta/subscribe'
-        message.ext ?= {}
-        message.ext.username = @_username
-        callback message
-
-  startListening: (username, cb) ->
-    @_username = username
-    @_client.subscribe @options.broadcast, cb
-
-  stopListening: ->
-    @_client.unsubscribe @options.broadcast
-
-  sendMessage: (content) =>
-    @_client.publish @options.broadcast, {content}
-
+###
+ Session model: user session attributes
+###
 class Session extends Backbone.Model
 
+###
+ Session view: user session information in the DOM
+###
 class SessionView extends BaseView
   events:
     'keypress .username': 'enterUsername'
@@ -131,6 +151,9 @@ class SessionView extends BaseView
     $('#messages').empty().append @messagesView.el
     @messagesView.render()
 
+###
+ Main: executed when the document is ready
+###
 jQuery ->
   session     = new Session {username: null}
   messenger   = new Messenger
